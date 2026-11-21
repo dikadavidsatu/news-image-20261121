@@ -1,34 +1,37 @@
 #!/usr/bin/env python3
-"""Entrypoint for the news-image-20261121 make.fun entry.
+"""Place the finished 21 November poster where the grader looks for it.
 
-The poster is rendered ahead of time by build_poster.py and shipped in
-this repository as ``entry.png``. This program only places that exact
-file at ``$MAKEFUN_OUTPUT_DIR/entry.png`` (``/output`` when the variable
-is not set), so both grading runs produce identical bytes.
-
-Standard library only, no network, no clock, no randomness. The copy
-is byte-for-byte, so the two grading runs write identical output.
+The poster itself is drawn ahead of time by build_poster.py and ships in
+this repository as entry.png. This entrypoint does nothing creative: it
+reads those exact bytes back and writes them, unchanged, to the output
+folder the grader provides, so the two grading runs produce identical
+output. It uses only the Python standard library and touches no network,
+no clock and no randomness.
 """
 
+from __future__ import annotations
+
 import os
-import shutil
 import sys
 from pathlib import Path
 
-
-def main() -> int:
-    here = Path(__file__).resolve().parent
-    poster = here / "entry.png"
-    if not poster.is_file():
-        print(f"entry.png missing from {here}", file=sys.stderr)
-        return 1
-    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
-    out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / "entry.png"
-    shutil.copyfile(poster, target)
-    print(f"wrote {target} ({target.stat().st_size} bytes)")
-    return 0
+POSTER_FILENAME = "entry.png"
+FALLBACK_OUTPUT_DIR = "/output"
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+def place_poster() -> None:
+    """Copy entry.png from this repository into the grading output folder."""
+    repo_root = Path(__file__).resolve().parent
+    source = repo_root / POSTER_FILENAME
+    if not source.exists():
+        sys.stderr.write(f"poster not found beside entrypoint: {source}\n")
+        raise SystemExit(1)
+    output_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR") or FALLBACK_OUTPUT_DIR)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    destination = output_dir / POSTER_FILENAME
+    payload = source.read_bytes()
+    destination.write_bytes(payload)
+    sys.stdout.write(f"poster placed at {destination} ({len(payload)} bytes)\n")
+
+
+place_poster()
